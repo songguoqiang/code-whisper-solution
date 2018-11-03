@@ -55,9 +55,7 @@ export default function(question) {
   return {
     endX: gameStatus.playerLocation.x,
     endY: gameStatus.playerLocation.y,
-    treasureFound: gameStatus.treasureFound,
-    treasureStolen:
-      gameStatus.treasureStolenByPirate || gameStatus.treasureStolenBySpy
+    treasureOwner: getTreasureOwner(gameStatus)
   };
 }
 
@@ -128,6 +126,22 @@ function updateTreasureStatus(gameStatus) {
       gameStatus.playerLocation.y
     );
   }
+}
+
+function getTreasureOwner(gameStatus) {
+  if (!gameStatus.treasureFound) {
+    return "no-one";
+  }
+
+  if (gameStatus.treasureStolenByPirate) {
+    return "pirate";
+  }
+
+  if (gameStatus.treasureStolenBySpy) {
+    return "spy";
+  }
+
+  return "me";
 }
 
 function treasureBelongsToMe(gameStatus) {
