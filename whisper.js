@@ -1,49 +1,153 @@
 export default function(question) {
-  const location = new Location(question.startX, question.startY);
-  const treasureLocation = new Location(question.treasureX, question.treasureY);
-  const pirateLocation = new Location(question.pirateX, question.pirateY);
-
   const instructions = question.instructions;
 
-  let treasureFound = isTreasureFound(location, treasureLocation);
-  let treasureStolen =
-    treasureFound && meetWithPirate(location, pirateLocation);
+  console.log("instructions", instructions);
+
+  const gameStatus = {
+    playerLocation: new Location(question.startX, question.startY),
+    treasureLocation: new Location(question.treasureX, question.treasureY),
+    pirateLocation: new Location(question.pirateX, question.pirateY),
+    spyLocation: new Location(question.spyX, question.spyY),
+    treasureFound: false,
+    isFollowedBySpy: false,
+    treasureStolenBySpy: false,
+    treasureStolenByPirate: false,
+    spyIsInjured: false,
+    pirateIsInjured: false
+  };
+
+  console.log(
+    "start location",
+    gameStatus.playerLocation.x,
+    gameStatus.playerLocation.y
+  );
+  console.log(
+    "pirate location",
+    gameStatus.pirateLocation.x,
+    gameStatus.pirateLocation.y
+  );
+  console.log(
+    "spy location",
+    gameStatus.spyLocation.x,
+    gameStatus.spyLocation.y
+  );
+  console.log(
+    "treasure location",
+    gameStatus.treasureLocation.x,
+    gameStatus.treasureLocation.y
+  );
+
+  updateTreasureStatus(gameStatus);
 
   const instructionProcessor = {
-    F: location.moveForward,
-    B: location.moveBackward,
-    L: location.moveLeft,
-    R: location.moveRight
+    F: gameStatus.playerLocation.moveForward,
+    B: gameStatus.playerLocation.moveBackward,
+    L: gameStatus.playerLocation.moveLeft,
+    R: gameStatus.playerLocation.moveRight
   };
 
   for (let step of instructions) {
     instructionProcessor[step]();
 
-    if (shouldSearchForTreasure(treasureFound)) {
-      treasureFound = isTreasureFound(location, treasureLocation);
-    }
+    updateTreasureStatus(gameStatus);
+  }
 
-    if (shouldDetectPirate(treasureFound, treasureStolen)) {
-      treasureStolen = meetWithPirate(location, pirateLocation);
+  return {
+    endX: gameStatus.playerLocation.x,
+    endY: gameStatus.playerLocation.y,
+    treasureFound: gameStatus.treasureFound,
+    treasureStolen:
+      gameStatus.treasureStolenByPirate || gameStatus.treasureStolenBySpy
+  };
+}
+
+function updateTreasureStatus(gameStatus) {
+  if (!gameStatus.treasureFound) {
+    gameStatus.treasureFound = isTreasureFound(
+      gameStatus.playerLocation,
+      gameStatus.treasureLocation
+    );
+  }
+
+  if (!gameStatus.isFollowedBySpy) {
+    gameStatus.isFollowedBySpy = bumpIntoSpy(
+      gameStatus.playerLocation,
+      gameStatus.spyLocation
+    );
+  }
+
+  let pirateInCurrentLocation = bumpIntoPirate(
+    gameStatus.playerLocation,
+    gameStatus.pirateLocation
+  );
+
+  if (
+    gameStatus.isFollowedBySpy &&
+    !gameStatus.spyIsInjured &&
+    !pirateInCurrentLocation
+  ) {
+    if (treasureBelongsToMe(gameStatus)) {
+      gameStatus.treasureStolenBySpy = true;
+      console.log(
+        "treasure stolen by spy at location ",
+        gameStatus.playerLocation.x,
+        gameStatus.playerLocation.y
+      );
     }
   }
 
-  return { endX: location.x, endY: location.y, treasureFound, treasureStolen };
+  if (
+    !gameStatus.isFollowedBySpy &&
+    pirateInCurrentLocation &&
+    !gameStatus.pirateIsInjured
+  ) {
+    if (treasureBelongsToMe(gameStatus)) {
+      gameStatus.treasureStolenByPirate = true;
+      console.log(
+        "treasure stolen by pirate at location ",
+        gameStatus.playerLocation.x,
+        gameStatus.playerLocation.y
+      );
+    }
+  }
+
+  if (
+    gameStatus.isFollowedBySpy &&
+    !gameStatus.spyIsInjured &&
+    gameStatus.treasureStolenBySpy &&
+    pirateInCurrentLocation &&
+    !gameStatus.pirateIsInjured
+  ) {
+    gameStatus.treasureStolenBySpy = false;
+    gameStatus.pirateIsInjured = true;
+    gameStatus.spyIsInjured = true;
+
+    console.log(
+      "pirate and spy fight at location ",
+      gameStatus.playerLocation.x,
+      gameStatus.playerLocation.y
+    );
+  }
 }
 
-function shouldSearchForTreasure(treasureFound) {
-  return !treasureFound;
+function treasureBelongsToMe(gameStatus) {
+  return (
+    gameStatus.treasureFound &&
+    !gameStatus.treasureStolenByPirate &&
+    !gameStatus.treasureStolenBySpy
+  );
 }
 
-function shouldDetectPirate(treasureFound, treasureStolen) {
-  return treasureFound && !treasureStolen;
-}
 function isTreasureFound(myLocation, treasureLocation) {
   return myLocation.equals(treasureLocation);
 }
 
-function meetWithPirate(myLocation, pirateLocation) {
+function bumpIntoPirate(myLocation, pirateLocation) {
   return myLocation.equals(pirateLocation);
+}
+
+function bumpIntoSpy(myLocation, spyLocation) {
+  return myLocation.equals(spyLocation);
 }
 
 class Location {
