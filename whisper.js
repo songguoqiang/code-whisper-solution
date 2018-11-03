@@ -1,14 +1,13 @@
 export default function(question) {
   const location = new Location(question.startX, question.startY);
   const treasureLocation = new Location(question.treasureX, question.treasureY);
+  const pirateLocation = new Location(question.pirateX, question.pirateY);
 
   const instructions = question.instructions;
 
-  let treasureFound = false;
-
-  if (location.equals(treasureLocation)) {
-    treasureFound = true;
-  }
+  let treasureFound = isTreasureFound(location, treasureLocation);
+  let treasureStolen =
+    treasureFound && meetWithPirate(location, pirateLocation);
 
   const instructionProcessor = {
     F: location.moveForward,
@@ -20,12 +19,31 @@ export default function(question) {
   for (let step of instructions) {
     instructionProcessor[step]();
 
-    if (location.equals(treasureLocation)) {
-      treasureFound = true;
+    if (shouldSearchForTreasure(treasureFound)) {
+      treasureFound = isTreasureFound(location, treasureLocation);
+    }
+
+    if (shouldDetectPirate(treasureFound, treasureStolen)) {
+      treasureStolen = meetWithPirate(location, pirateLocation);
     }
   }
 
-  return { endX: location.x, endY: location.y, treasureFound };
+  return { endX: location.x, endY: location.y, treasureFound, treasureStolen };
+}
+
+function shouldSearchForTreasure(treasureFound) {
+  return !treasureFound;
+}
+
+function shouldDetectPirate(treasureFound, treasureStolen) {
+  return treasureFound && !treasureStolen;
+}
+function isTreasureFound(myLocation, treasureLocation) {
+  return myLocation.equals(treasureLocation);
+}
+
+function meetWithPirate(myLocation, pirateLocation) {
+  return myLocation.equals(pirateLocation);
 }
 
 class Location {
